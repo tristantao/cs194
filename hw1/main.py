@@ -120,12 +120,96 @@ print (idfs_small)
 
 print "There are %s unique tokens in the small data sets." % unique_tokens
 
+# Plotting goes here
+#
+
+# TODO Implement this
+def tfidf(tokens, idfs):
+    tokens_tf_hash = tf(tokens)
+    tokens_tfidf_hash = {}
+    for token in tokens:
+        tokens_tfidf_hash[token] = idfs[token] * tokens_tf_hash[token]
+    return tokens_tfidf_hash
+
+rec_b000hkgj8k_weights = tfidf(amazon_rec2tok['b000hkgj8k'], idfs_small) # Fix me
+
+print "Amazon record 'b000hkgj8k' has tokens and weights:\n%s" % rec_b000hkgj8k_weights
+
+import math
+
+# Optional utility
+def dotprod(a, b):
+    sum_product = 0.0
+    for key in a.keys():
+        sum_product += (a.get(key, 0) * b.get(key, 0)) #if the other document doens't have this single token, it'll be 0 anyways.
+    return sum_product
+
+# Optional utility
+def norm(a):
+    return math.sqrt(dotprod(a, a))
+
+# Optional freebie
+def cossim(a, b):
+    return dotprod(a, b) / norm(a) / norm(b)
+
+test_vec1 = {'foo': 2, 'bar': 3, 'baz': 5 }
+test_vec2 = {'foo': 1, 'bar': 0, 'baz': 20 }
+print dotprod(test_vec1, test_vec2), norm(test_vec1) # Should be 102 6.16441400297
+
+# TODO Implement this
+def cosine_similarity(string1, string2, idfs):
+    tokens_a = tokenize(string1)
+    tokens_b = tokenize(string2)
+    vector_a = tfidf(tokens_a, idfs)
+    vector_b = tfidf(tokens_b, idfs)
+    #print vector_a
+    #print vector_b
+    return cossim(vector_a, vector_b)
+
+print cosine_similarity("Adobe Photoshop",
+                        "Adobe Illustrator",
+                        idfs_small) # Should be 0.0577243382163
+
+# TODO Compute similarities
+similarities = {}
+for amazon_key, amazon_val in AMAZON_DICT_SMALL.items():
+    for google_key, google_val in GOOGLE_DICT_SMALL.items():
+        #print google_val
+        similarities[(amazon_key, google_key)] = cosine_similarity(amazon_val, google_val, idfs_small)
+
+print 'Requested similarity is %s.' % similarities[('b000o24l3q',
+  'http://www.google.com/base/feeds/snippets/17242822440574356561')]
 
 
+gold_standard = [] # Load this if not already loaded
+#loading in (amazon, google) format
+with open(os.path.join(DATA_PATH, "Amazon_Google_perfectMapping.csv"), 'rb') as f:
+    reader = csv.reader(f)
+    next(reader, None) #ignore header
+    for row in reader:
+        gold_standard.append(tuple(row))
+
+true_dups = 0 # Fix me
+false_dups = 0
+total_sim_dups = 0.0
+total_sim_non = 0.0
+
+for amazon_id, amazon_val in AMAZON_DICT_SMALL.items():
+    for google_id, google_val in GOOGLE_DICT_SMALL.items():
+        if (amazon_id, google_id) in gold_standard: #dup
+            true_dups += 1
+            total_sim_dups += cosine_similarity(amazon_val, google_val, idfs_small)
+        else: #non dup
+            false_dups += 1
+            total_sim_non += cosine_similarity(amazon_val, google_val, idfs_small)
 
 
+avg_sim_dups = total_sim_dups / true_dups # Fix me
+avg_sim_non = total_sim_non / false_dups # Fix me
 
-
+print "There are %s true duplicates." % true_dups
+print "The average similarity of true duplicates is %s." % avg_sim_dups
+print "And for non duplicates, it is %s." % avg_sim_non
 
 
 
