@@ -1,0 +1,5 @@
+
+val myNumbers = List(1, 2, 5, 4, 7, 3)
+
+
+def cube(a: Int): Int = a * a * a
